@@ -122,7 +122,7 @@ module devhub::devcard {
         object_table::add(&mut devhub.cards, devhub.counter, devcard);
     }
 
-    // This function allows the user update the card description
+    // This function allows users to update the card description
     public entry fun update_card_description(devhub: &mut DevHub, new_description: vector<u8>, id: u64, ctx: &mut TxContext) {
         let user_card = object_table::borrow_mut(&mut devhub.cards, id);
         assert!(tx_context::sender(ctx) == user_card.owner, NOT_THE_OWNER);
@@ -149,14 +149,14 @@ module devhub::devcard {
         });     
     }
 
-    // This function allows the user deactivate their account by setting open_to_work field of their card to false
+    // This function allows users to deactivate their account by setting open_to_work field of their card to false
     public fun deactivate_card(devhub: &mut DevHub, id: u64, ctx: &mut TxContext) {
         let user_card = object_table::borrow_mut(&mut devhub.cards, id);
         assert!(tx_context::sender(ctx) == user_card.owner, NOT_THE_OWNER);
         user_card.open_to_work = false;
     }
 
-    // This function retunrs the card based on the ID provided
+    // This function returns the card based on the ID provided
     public fun get_card_info(devhub: &DevHub, id: u64) : (
         String,
         address,
@@ -183,6 +183,4 @@ module devhub::devcard {
             card.open_to_work,
         )        
     }
-
-    
 }
