@@ -11,14 +11,10 @@ module devhub::devcard {
     use sui::object_table::{Self, ObjectTable};
     use sui::event;
 
-    // Errors
     const NOT_THE_OWNER: u64 = 0;
     const INSUFFICIENT_FUNDS: u64 = 1;
-
-    // Consts
     const MIN_CARD_COST: u64 = 1;
 
-    // Objects
     struct DevCard has key, store {
         id: UID,
         name: String,
@@ -33,6 +29,8 @@ module devhub::devcard {
         open_to_work: bool,
     }
 
+    // This object is the owner of the contract.
+    // The tokens will be sent to this address.
     struct DevHub has key {
         id: UID,
         owner: address,
@@ -40,7 +38,7 @@ module devhub::devcard {
         cards: ObjectTable<u64, DevCard>,
     }
 
-    // Events
+    // This is an event that will be emitted in the create_card function.
     struct CardCreated has copy, drop {
         id: ID,
         name: String,
@@ -66,6 +64,7 @@ module devhub::devcard {
         owner: address,
     }
 
+    // Initiating the contract
     fun init(ctx: &mut TxContext) {
         transfer::share_object( DevHub {
             id: object::new(ctx),
@@ -75,6 +74,7 @@ module devhub::devcard {
         });
     }
 
+    // Creating new cards and adding them to the table
     public entry fun create_card(
         name: vector<u8>, 
         title: vector<u8>,
@@ -87,12 +87,14 @@ module devhub::devcard {
         devhub: &mut DevHub,
         ctx: &mut TxContext )
     {
-        let value  = sui::coin::value(&payment);
-        assert!(value >= MIN_CARD_COST, INSUFFICIENT_FUNDS);
-        transfer::public_transfer(payment, devhub.owner);
-        devhub.counter = devhub.counter + 1;
+        let value  = sui::coin::value(&payment); // Getting the tokens transferred with the transaction
+        assert!(value >= MIN_CARD_COST, INSUFFICIENT_FUNDS); // Checking if the sent amount is correct 
+        transfer::public_transfer(payment, devhub.owner); // Transferring the tokens
+        devhub.counter = devhub.counter + 1; // Increasing the counter before adding the card to the table
 
-        let id = object::new(ctx);
+        let id = object::new(ctx); // Creating a new ID to use it with both devcard and the event
+
+        // Emitting the event
         event::emit(CardCreated {
             id: object::uid_to_inner(&id),
             name: string::utf8(name),
@@ -101,6 +103,7 @@ module devhub::devcard {
             contact: string::utf8(contact),
         });
 
+        // Creating a new DevCard
         let devcard = DevCard {
             id: id,
             name: string::utf8(name),
@@ -115,9 +118,11 @@ module devhub::devcard {
             open_to_work: true,
         };
 
+        // Adding the card to the table
         object_table::add(&mut devhub.cards, devhub.counter, devcard);
     }
 
+    // This function allows the user update the card description
     public entry fun update_card_description(devhub: &mut DevHub, new_description: vector<u8>, id: u64, ctx: &mut TxContext) {
         let user_card = object_table::borrow_mut(&mut devhub.cards, id);
         assert!(tx_context::sender(ctx) == user_card.owner, NOT_THE_OWNER);
@@ -144,12 +149,14 @@ module devhub::devcard {
         });     
     }
 
+    // This function allows the user deactivate their account by setting open_to_work field of their card to false
     public fun deactivate_card(devhub: &mut DevHub, id: u64, ctx: &mut TxContext) {
         let user_card = object_table::borrow_mut(&mut devhub.cards, id);
         assert!(tx_context::sender(ctx) == user_card.owner, NOT_THE_OWNER);
         user_card.open_to_work = false;
     }
 
+    // This function retunrs the card based on the ID provided
     public fun get_card_info(devhub: &DevHub, id: u64) : (
         String,
         address,
